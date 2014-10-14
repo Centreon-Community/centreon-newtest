@@ -1,0 +1,272 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+centreon::script::centreon_newtestd->new()->run();
+
+package centreon::script::centreon_newtestd;
+
+use strict;
+use warnings;
+use POSIX;
+use FindBin;
+use lib "$FindBin::Bin";
+use Schedule::Cron;
+#use IPC::Shareable (':lock');
+use newtest::manager;
+
+use base qw(centreon::script);
+use vars qw(%centreon_newtestd_config);
+
+my %handlers = (TERM => {}, CHLD => {}, DIE => {});
+
+sub new {
+    my $class = shift;
+    my $self = $class->SUPER::new("centreon_newtestd",
+        centreon_db_conn => 0,
+        centstorage_db_conn => 0,
+    );
+    $self->add_options(
+        "config-extra=s" => \$self->{opt_extra},
+    );
+    
+    %{$self->{centreon_newtestd_default_config}} =
+    (
+    );
+
+    $self->{TERM_timeout} = 30;
+    $self->{return_child} = {};
+    $self->{job_launched} = {};
+    
+    $self->set_signal_handlers;
+    bless $self, $class;
+    return $self;
+}
+
+sub init {
+    my $self = shift;
+    $self->SUPER::init();
+
+    if (!defined($self->{opt_extra})) {
+        $self->{opt_extra} = "/etc/centreon/centreon_newtestd.pm";
+    }
+    if (-f $self->{opt_extra}) {
+        require $self->{opt_extra};
+    } else {
+        $self->{logger}->writeLogInfo("Can't find extra config file $self->{opt_extra}");
+    }
+    $self->{centreon_newtestd_config} = {%{$self->{centreon_newtestd_default_config}}, %centreon_newtestd_config};
+}
+
+sub set_signal_handlers {
+    my $self = shift;
+
+    $SIG{TERM} = \&class_handle_TERM;
+    $handlers{TERM}->{$self} = sub { $self->handle_TERM() };
+    $SIG{__DIE__} = \&class_handle_DIE;
+    $handlers{DIE}->{$self} = sub { $self->handle_DIE($_[0]) };
+    $SIG{CHLD} = \&class_handle_CHLD;
+    $handlers{CHLD}->{$self} = sub { $self->handle_CHLD() };
+}
+
+sub class_handle_TERM {
+    foreach (keys %{$handlers{TERM}}) {
+        &{$handlers{TERM}->{$_}}();
+    }
+    exit(0);
+}
+
+sub class_handle_DIE {
+    my ($msg) = @_;
+
+    foreach (keys %{$handlers{DIE}}) {
+        &{$handlers{DIE}->{$_}}($msg);
+    }
+}
+
+sub class_handle_CHLD {
+    foreach (keys %{$handlers{CHLD}}) {
+        &{$handlers{CHLD}->{$_}}();
+    }
+}
+
+sub handle_DIE {
+    my $self = shift;
+    my $msg = shift;
+
+    $self->{logger}->writeLogInfo("die: $msg");
+    # Send -TERM signal
+    my $counter = 0;
+    for (; $counter < $self->{TERM_timeout}; $counter++) {
+        my $still_wait = 0;
+        foreach my $job_id (keys %{$self->{job_launched}}) {
+            my $pid = $self->{job_launched}->{$job_id};
+            if ($pid != -1) {
+               kill('TERM', $pid); 
+               $self->{logger}->writeLogInfo("Send -TERM signal to job $job_id $pid ...");
+               $still_wait = 1;
+            }
+        }
+        
+        last if ($still_wait == 0);
+        sleep 1;
+        $self->repear_jobs();
+    }
+
+    # Maybe we kill
+    if ($counter >= $self->{TERM_timeout}) {
+        foreach my $job_id (keys %{$self->{job_launched}}) {
+            my $pid = $self->{job_launched}->{$job_id};
+            if ($pid != -1) {
+               kill('KILL', $pid); 
+               $self->{logger}->writeLogInfo("Send -KILL signal to job $job_id $pid ...");
+            }
+        }
+    }
+    
+    exit(0);
+}
+
+sub handle_TERM {
+    my $self = shift;
+    $self->{logger}->writeLogInfo("$$ Receiving order to stop...");
+    die("Quit");
+}
+
+sub handle_CHLD {
+    my $self = shift;
+    my $child_pid;
+
+    $self->{logger}->writeLogInfo("Receiving SIGCHLD...");
+    while (($child_pid = waitpid(-1, &WNOHANG)) > 0) {
+        $self->{return_child}->{$child_pid} = {exit_code => $? >> 8};
+    }
+    $SIG{CHLD} = \&class_handle_CHLD;
+}
+
+sub repear_jobs {
+    my ($self, %options) = @_;
+    
+    foreach my $pid_dead (keys %{$self->{return_child}}) {
+        foreach my $job_id (keys %{$self->{job_launched}}) {
+            if ($self->{job_launched}->{$job_id} == $pid_dead) {
+                delete $self->{return_child}->{$pid_dead};
+                $self->{job_launched}->{$job_id} = -1;
+            }
+        }
+    }
+}
+
+sub can_launch_job {
+    my ($self, %options) = @_;
+    
+    $self->repear_jobs();
+    if ($self->{job_launched}->{$options{id}} == -1) {
+        return 0;
+    }
+    
+    return -1;
+}
+
+########################
+
+sub newtest {
+    my ($self, $arguments) = @_;
+    
+    $SIG{CHLD} = 'IGNORE';
+    my $newtest_manager = newtest::manager->new(endpoint => $arguments->{args}->{nmc_endpoint},
+                                                timeout => $arguments->{args}->{timeout},
+                                                host_template => $arguments->{args}->{host_template},
+                                                host_prefix => $arguments->{args}->{host_prefix},
+                                                service_template => $arguments->{args}->{service_template}, 
+                                                service_prefix => $arguments->{args}->{service_prefix},
+                                                poller_name => $arguments->{args}->{poller_name},
+                                                clapi_command => $arguments->{args}->{clapi_command}, 
+                                                clapi_username => $arguments->{args}->{clapi_username},
+                                                clapi_password => $arguments->{args}->{clapi_password}, 
+                                                clapi_action_applycfg => $arguments->{args}->{clapi_action_applycfg},
+                                                clapi_generate_config_timeout => $arguments->{args}->{clapi_generate_config_timeout},
+                                                clapi_timeout => $arguments->{args}->{clapi_timeout},
+                                                cmdFile => $arguments->{cmdFile},
+                                                logger => $arguments->{logger},
+                                                centreon_config => $arguments->{centreon_config});
+    if (defined($newtest_manager)) {
+        $newtest_manager->run(%{$arguments->{args}});
+    }    
+}
+
+##### init scheduler #####
+
+sub dispatcher {
+    my $self = $_[0]->{instance};
+
+    $self->{logger}->writeLogInfo("Job " . $_[0]->{id} . " is starting");    
+    if ($self->can_launch_job(id => $_[0]->{id}) == -1) {
+        $self->{logger}->writeLogError("Job " . $_[0]->{id} . " cannot be launched: still a job running");
+        return ;
+    }
+    my $current_pid = fork();
+    if (!defined($current_pid)) {
+        $self->{logger}->writeLogError("Job " . $_[0]->{id} . " cannot be launched: cannot fork $!");
+        return ;
+    } elsif ($current_pid == 0) {
+        $self->newtest($_[0]);
+        exit(0);
+    }
+    
+    $self->{job_launched}->{$_[0]->{id}} = $current_pid;
+    $self->{logger}->writeLogInfo("Job " . $_[0]->{id} . " had be launched: pid $current_pid");
+}
+
+sub run {
+    my $self = shift;
+
+    $self->SUPER::run();
+    my $cron = new Schedule::Cron(\&dispatcher, nostatus => 1, nofork => 1);
+    foreach (keys %{$self->{centreon_newtestd_config}}) {
+        my %arguments = (args => $self->{centreon_newtestd_config}->{$_}->{arguments});
+        $arguments{instance} = $self;
+        $arguments{id} = $_;
+        $arguments{logger} = $self->{logger};
+        $arguments{cmdFile} = $self->{centreon_config}->{VarLib} . "/centcore.cmd";
+        $arguments{centreon_config} = $self->{centreon_config};
+        $self->{job_launched}->{$_} = -1;
+        
+        # Add dynamically  crontab entries
+        $cron->add_entry($self->{centreon_newtestd_config}->{$_}->{date}, \&dispatcher, \%arguments);
+    }
+
+    $cron->run();
+    exit(0);
+}
+
+__END__
+
+=head1 NAME
+
+centreon_newtestd - Daemon to retrieve newtest informations and commit it in centreon
+
+=head1 SYNOPSIS
+
+centreon_newtestd [options]
+
+=head1 OPTIONS
+
+=over 8
+
+=item B<--config>
+
+Specify the path to the main configuration file (default: /etc/centreon/conf.pm).
+
+=item B<--help>
+
+Print a brief help message and exits.
+
+=back
+
+=head1 DESCRIPTION
+
+B<centreon_newtestd>.
+
+=cut
