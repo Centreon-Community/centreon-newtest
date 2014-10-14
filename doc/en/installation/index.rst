@@ -19,6 +19,8 @@ Perl Schedule::Cron          1.01
 Perl SOAP::Lite              0.71
 Perl Date::Parse             1.16
 centreon-common-perl         2.5
+centreon-clapi               1.6.1
+centcore                     2.5.x
 ==================== =====================
 
 .. warning::
@@ -27,7 +29,7 @@ centreon-common-perl         2.5
 Daemon location
 ```````````````
 
-The "centreon-newtestd" daemon should be installed on Centreon Central server. Minimal used ressources are :
+The "centreon-newtestd" daemon must be installed on Centreon Central server. Minimal used ressources are :
 
 * RAM : 128 MB.
 * CPU : it depends the number of newtest scenarios.

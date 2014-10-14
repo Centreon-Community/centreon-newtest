@@ -19,6 +19,8 @@ Perl Schedule::Cron          1.01
 Perl SOAP::Lite              0.71
 Perl Date::Parse             1.16
 centreon-common-perl         2.5
+centreon-clapi               1.6.1
+centcore                     2.5.x
 ==================== =====================
 
 .. warning::
@@ -27,7 +29,7 @@ centreon-common-perl         2.5
 Localisation du daemon
 ``````````````````````````
 
-Le daemon "centreon-newtestd" est installé de préférence sur le serveur Central Centreon. Les ressources minimales requises sont :
+Le daemon "centreon-newtestd" doit être installé sur le serveur Central Centreon. Les ressources minimales requises sont :
 
 * RAM : 128 Mo.
 * CPU : Cela dépend du nombre de scénarios newtest.
