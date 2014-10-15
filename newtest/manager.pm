@@ -469,6 +469,8 @@ sub get_newtest_scenarios {
                     $self->{db_newtest}->{$host_name}->{$service_name} = {};
                     $self->{must_push_config} = 1;
                     $self->{logger}->writeLogInfo("Create service '$service_name' for host '$host_name' succeeded.");
+                    $self->clapi_execute(cmd => '-o SERVICE -a setmacro -v "' . $host_name . ';' . $service_name . ';NEWTEST_MESSAGEID;"',
+                                         timeout => $self->{clapi_timeout});
                 }
             }
             
