@@ -307,7 +307,7 @@ GetLicenceOptionValue => {
 ); # end my %methods
 
 use SOAP::Lite;
-use newtest::stubs::errors;
+use centreon::newtest::stubs::errors;
 use Exporter;
 use Carp ();
 
@@ -320,7 +320,7 @@ sub _call {
     my ($self, $method) = (shift, shift);
     my $name = UNIVERSAL::isa($method => 'SOAP::Data') ? $method->name : $method;
     my %method = %{$methods{$name}};
-    $self->on_fault(\&newtest::stubs::errors::soapGetBad);
+    $self->on_fault(\&centreon::newtest::stubs::errors::soapGetBad);
     $self->proxy($method{endpoint} || Carp::croak "No server address (proxy) specified")
         unless $self->proxy;
     my @templates = @{$method{parameters}};

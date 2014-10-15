@@ -1,5 +1,5 @@
 
-package newtest::stubs::errors;
+package centreon::newtest::stubs::errors;
 
 use strict;
 use warnings;

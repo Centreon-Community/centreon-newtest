@@ -112,7 +112,7 @@ Download « centreon-newtestd » archive, then install ::
   root # cp centreon_newtestd-init /etc/init.d/centreon_newtestd
   
   root # mkdir -p /usr/lib/perl5/vendor_perl/5.8.8/centreon/newtest/
-  root # cp -R newtest/* /usr/lib/perl5/vendor_perl/5.8.8/centreon/newtest/
+  root # cp -R centreon/newtest/* /usr/lib/perl5/vendor_perl/5.8.8/centreon/newtest/
 
 Configure "centreon-newtestd" daemon to start at boot ::
   

@@ -14,7 +14,7 @@ use FindBin;
 use lib "$FindBin::Bin";
 use Schedule::Cron;
 #use IPC::Shareable (':lock');
-use newtest::manager;
+use centreon::newtest::manager;
 
 use base qw(centreon::script);
 use vars qw(%centreon_newtestd_config);
@@ -175,7 +175,7 @@ sub newtest {
     my ($self, $arguments) = @_;
     
     $SIG{CHLD} = 'IGNORE';
-    my $newtest_manager = newtest::manager->new(endpoint => $arguments->{args}->{nmc_endpoint},
+    my $newtest_manager = centreon::newtest::manager->new(endpoint => $arguments->{args}->{nmc_endpoint},
                                                 timeout => $arguments->{args}->{timeout},
                                                 host_template => $arguments->{args}->{host_template},
                                                 host_prefix => $arguments->{args}->{host_prefix},

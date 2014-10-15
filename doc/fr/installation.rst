@@ -116,7 +116,7 @@ Installer les fichiers::
   root # cp centreon_newtestd-init /etc/init.d/centreon_newtestd
   
   root # mkdir -p /usr/lib/perl5/vendor_perl/5.8.8/centreon/newtest/
-  root # cp -R newtest/* /usr/lib/perl5/vendor_perl/5.8.8/centreon/newtest/
+  root # cp -R centreon/newtest/* /usr/lib/perl5/vendor_perl/5.8.8/centreon/newtest/
 
 Activer le daemon « centreon-newtestd » au démarrage::
   

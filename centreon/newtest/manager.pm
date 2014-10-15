@@ -1,10 +1,10 @@
 
-package newtest::manager;
+package centreon::newtest::manager;
 
 use strict;
 use warnings;
-use newtest::stubs::ManagementConsoleService;
-use newtest::stubs::errors;
+use centreon::newtest::stubs::ManagementConsoleService;
+use centreon::newtest::stubs::errors;
 use centreon::common::db;
 use centreon::common::misc;
 use Date::Parse;
@@ -318,7 +318,7 @@ sub get_newtest_diagnostic {
     my ($self, %options) = @_;
     
     my $result = $self->{instance}->ListMessages('Instance', 30, 'Diagnostics', [$options{scenario}, $options{robot}]);
-    if (defined(my $com_error = newtest::stubs::errors::get_error())) {
+    if (defined(my $com_error = centreon::newtest::stubs::errors::get_error())) {
         $self->{logger}->writeLogError("NewTest API error 'ListMessages' method: " . $com_error);
         return -1;
     }
@@ -359,7 +359,7 @@ sub get_scenario_results {
     }
     if (!defined($self->{cache_robot_list_results}->{$options{robot}})) {
         my $result = $self->{instance}->ListResults('Robot', 30, [$options{robot}]);
-        if (defined(my $com_error = newtest::stubs::errors::get_error())) {
+        if (defined(my $com_error = centreon::newtest::stubs::errors::get_error())) {
             $self->{logger}->writeLogError("NewTest API error 'ListResults' method: " . $com_error);
             return -1;
         }
@@ -404,7 +404,7 @@ sub get_newtest_extra_metrics {
     my ($self, %options) = @_;
     
     my $result = $self->{instance}->ListResultChildren($options{id});
-    if (defined(my $com_error = newtest::stubs::errors::get_error())) {
+    if (defined(my $com_error = centreon::newtest::stubs::errors::get_error())) {
         $self->{logger}->writeLogError("NewTest API error 'ListResultChildren' method: " . $com_error);
         return -1;
     }
@@ -431,7 +431,7 @@ sub get_newtest_scenarios {
     my $result = $self->{instance}->ListScenarioStatus($options{ListScenarioStatus}->{search}, 
                                                        0, 
                                                        $options{ListScenarioStatus}->{instances});
-    if (defined(my $com_error = newtest::stubs::errors::get_error())) {
+    if (defined(my $com_error = centreon::newtest::stubs::errors::get_error())) {
         $self->{logger}->writeLogError("NewTest API error 'ListScenarioStatus' method: " . $com_error);
         return -1;
     }
