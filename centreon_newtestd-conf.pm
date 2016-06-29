@@ -6,7 +6,7 @@
                                                     host_template => 'generic-active-host', host_prefix => 'Robot-%s',
                                                     service_template => 'generic-passive-service', service_prefix => 'Scenario-%s',
                                                     poller_name => 'Central',
-                                                    clapi_command => '/usr/share/centreon/www/modules/centreon-clapi/core/centreon', 
+                                                    clapi_command => '/usr/share/centreon/bin/centreon', 
                                                     clapi_username => 'admin', clapi_password => 'centreon',
                                                     clapi_action_applycfg => 'POLLERRELOAD',
                                                     ListScenarioStatus => { search => 'All', instances => [] } 
@@ -17,7 +17,7 @@
                                                     host_template => 'generic-active-host', host_prefix => 'Robot-%s',
                                                     service_template => 'generic-passive-service', service_prefix => 'Scenario-%s',
                                                     poller_name => 'Central',
-                                                    clapi_command => '/usr/share/centreon/www/modules/centreon-clapi/core/centreon', 
+                                                    clapi_command => '/usr/share/centreon/bin/centreon', 
                                                     clapi_username => 'admin', clapi_password => 'centreon',
                                                     clapi_action_applycfg => 'POLLERRELOAD',
                                                     ListScenarioStatus => { search => 'Robot', instances => ['OSLO'] } 
