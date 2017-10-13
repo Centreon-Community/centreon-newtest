@@ -12,7 +12,8 @@
                                                     ListScenarioStatus => { search => 'All', instances => [] } 
                                                  } },
         2 => { date => '* * * * *', arguments => { 
-                                                    nmc_endpoint => 'http://192.168.6.8/nws/managementconsoleservice.asmx', 
+                                                    nmc_endpoint => 'http://192.168.6.8/nws/managementconsoleservice.asmx',
+                                                    nmc_username => 'admin', nmc_password => 'test',
                                                     timeout => 10,
                                                     host_template => 'generic-active-host', host_prefix => 'Robot-%s',
                                                     service_template => 'generic-passive-service', service_prefix => 'Scenario-%s',

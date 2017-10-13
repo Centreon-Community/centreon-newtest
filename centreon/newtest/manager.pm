@@ -8,6 +8,7 @@ use centreon::newtest::stubs::errors;
 use centreon::common::db;
 use centreon::common::misc;
 use Date::Parse;
+use MIME::Base64;
 
 my %handlers = (TERM => {}, DIE => {});
 
@@ -60,6 +61,8 @@ sub new {
         }
         $self->{$_} = $options{$_};
     }
+    $self->{nmc_username} = $options{nmc_username};
+    $self->{nmc_password} = $options{nmc_password};
     
     # list from robot/scenario from db
     #   Format = { robot_name1 => { scenario1 => { last_execution_time => xxxx }, scenario2 => { } }, ... }
@@ -428,6 +431,13 @@ sub get_newtest_scenarios {
     my ($self, %options) = @_;
     
     $self->{instance}->proxy($self->{endpoint}, timeout => $self->{timeout});
+    
+    if (defined($self->{nmc_username}) && $self->{nmc_username} ne '' &&
+        defined($self->{nmc_password}) && $self->{nmc_password} ne '') {
+        $self->{instance}->transport->http_request->header(
+            'Authorization' => 'Basic ' . MIME::Base64::encode($self->{nmc_username} . ':' . $self->{nmc_password}, '')
+        );
+    }
     my $result = $self->{instance}->ListScenarioStatus($options{ListScenarioStatus}->{search}, 
                                                        0, 
                                                        $options{ListScenarioStatus}->{instances});

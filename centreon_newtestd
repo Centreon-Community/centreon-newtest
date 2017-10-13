@@ -176,6 +176,8 @@ sub newtest {
     
     $SIG{CHLD} = 'IGNORE';
     my $newtest_manager = centreon::newtest::manager->new(endpoint => $arguments->{args}->{nmc_endpoint},
+                                                nmc_username => $arguments->{args}->{nmc_username},
+                                                nmc_password => $arguments->{args}->{nmc_password},
                                                 timeout => $arguments->{args}->{timeout},
                                                 host_template => $arguments->{args}->{host_template},
                                                 host_prefix => $arguments->{args}->{host_prefix},
