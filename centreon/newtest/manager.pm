@@ -6,7 +6,6 @@ use warnings;
 use centreon::newtest::stubs::ManagementConsoleService;
 use centreon::newtest::stubs::errors;
 use centreon::common::db;
-use centreon::common::misc;
 use Date::Parse;
 use MIME::Base64;
 
@@ -37,6 +36,84 @@ my %map_service_status = (
     3 => 'UNKNOWN', 
     4 => 'PENDING',
 );
+
+sub backtick {
+    my %arg = (
+        command => undef,
+        arguments => [],
+        timeout => 30,
+        wait_exit => 0,
+        redirect_stderr => 0,
+        @_,
+    );
+    my @output;
+    my $pid;
+    my $return_code;
+    
+    my $sig_do;
+    if ($arg{wait_exit} == 0) {
+        $sig_do = 'IGNORE';
+        $return_code = undef;
+    } else {
+        $sig_do = 'DEFAULT';
+    }
+    local $SIG{CHLD} = $sig_do;
+    $SIG{TTOU} = 'IGNORE';
+    $| = 1;
+
+    if (!defined($pid = open( KID, "-|" ))) {
+        return (-1001, "Cant fork: $!", -1);
+    }
+
+    if ($pid) {
+        
+        eval {
+           local $SIG{ALRM} = sub { die "Timeout by signal ALARM\n"; };
+           alarm( $arg{timeout} );
+           while (<KID>) {
+               chomp;
+               push @output, $_;
+           }
+
+           alarm(0);
+        };
+
+        if ($@) {
+            if ($pid != -1) {
+                kill -9, $pid;
+            }
+
+            alarm(0);
+            return (-1000, "Command too long to execute (timeout)...", -1);
+        } else {
+            if ($arg{wait_exit} == 1) {
+                # We're waiting the exit code                
+                waitpid($pid, 0);
+                $return_code = ($? >> 8);
+            }
+            close KID;
+        }
+    } else {
+        # child
+        # set the child process to be a group leader, so that
+        # kill -9 will kill it and all its descendents
+        # We have ignore SIGTTOU to let write background processes
+        setpgrp( 0, 0 );
+
+        if ($arg{redirect_stderr} == 1) {
+            open STDERR, ">&STDOUT";
+        }
+        if (scalar(@{$arg{arguments}}) <= 0) {
+            exec($arg{command});
+        } else {
+            exec($arg{command}, @{$arg{arguments}});
+        }
+        # Exec is in error. No such command maybe.
+        exit(127);
+    }
+
+    return (0, join("\n", @output), $return_code);
+}
 
 sub new {
     my ($class, %options) = @_;
@@ -250,11 +327,12 @@ sub clapi_execute {
     my ($self, %options) = @_;
     
     my $cmd = $self->{clapi_command} . " -u '" . $self->{clapi_username} . "' -p '" . $self->{clapi_password} . "' " . $options{cmd};
-    my ($lerror, $stdout, $exit_code) = centreon::common::misc::backtick(command => $cmd,
-                                                                         logger => $self->{logger},
-                                                                         timeout => $options{timeout},
-                                                                         wait_exit => 1
-                                                                         );
+    my ($lerror, $stdout, $exit_code) = backtick(
+        command => $cmd,
+        logger => $self->{logger},
+        timeout => $options{timeout},
+        wait_exit => 1,
+    );
     if ($lerror == -1 || ($exit_code >> 8) != 0) {
         $self->{logger}->writeLogError("Clapi execution problem for command $cmd : " . $stdout);
         return -1;
@@ -275,11 +353,11 @@ sub submit_external_cmd {
     my ($self, %options) = @_;
     
     foreach my $cmd (@{$self->{external_commands}}) {
-        my ($lerror, $stdout, $exit_code) = centreon::common::misc::backtick(command => '/bin/echo "' . $cmd . '" >> ' . $self->{cmdFile},
-                                                                             logger => $self->{logger},
-                                                                             timeout => 5,
-                                                                             wait_exit => 1
-                                                                            );
+        my ($lerror, $stdout, $exit_code) = backtick(command => '/bin/echo "' . $cmd . '" >> ' . $self->{cmdFile},
+            logger => $self->{logger},
+            timeout => 5,
+            wait_exit => 1
+        );
         if ($lerror == -1 || ($exit_code >> 8) != 0) {
             $self->{logger}->writeLogError("Clapi execution problem for command $cmd : " . $stdout);
             return -1;
