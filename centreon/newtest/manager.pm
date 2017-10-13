@@ -274,7 +274,7 @@ sub get_centreondb_cache {
     my $request = 'SELECT host.host_name, service.service_description 
                         FROM host 
                         LEFT JOIN (host_service_relation, service) ON (host_service_relation.host_host_id = host.host_id AND service.service_id = host_service_relation.service_service_id AND service.service_description LIKE ' . $self->{centreon_db_centreon}->quote($self->{service_prefix}) . ') 
-                        WHERE host_name LIKE ' . $self->{centreon_db_centreon}->quote($self->{host_prefix});
+                        WHERE host_name LIKE ' . $self->{centreon_db_centreon}->quote($self->{host_prefix}) . " AND host_register = '1'";
     $request =~ s/%s/%/g;
     my ($status, $stmt) = $self->{centreon_db_centreon}->query($request);
     if ($status == -1) {
